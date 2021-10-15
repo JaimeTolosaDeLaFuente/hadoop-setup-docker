@@ -1,0 +1,49 @@
+// Create streaming DataFrame reading from files
+
+// Run with // $ spark-shell --master local[2]
+
+// Test with
+// $ mkdir -p /tmp/devsh-streaming
+// $ chmod +wr /tmp/devsh-streaming
+// $ $DEVSH/scripts/streamtest-file.sh $DEVDATA/activations_stream/ /tmp/devsh-streaming
+
+val inputDir = "file:/tmp/devsh-streaming/"
+
+// JSON format files containing device activations
+import org.apache.spark.sql.types._
+val activationsSchema = StructType( List(
+  StructField("acct_num", IntegerType),
+  StructField("dev_id", StringType),
+  StructField("phone", StringType),
+  StructField("model", StringType)))
+
+// read data from a set of streaming files
+val activationsDF = spark.readStream.schema(activationsSchema).json(inputDir)
+activationsDF.printSchema()
+
+// Read the input files write the data to the console
+// Append mode = only show new data (new batches containing new files)
+val activationsQuery = activationsDF.writeStream.outputMode("append").option("truncate","false").format("console").start()
+
+activationsQuery.stop
+
+// write to console, complete mode (only allowed for aggregated queries)
+val activationCountDF = activationsDF.groupBy("model").count()
+val activationCountQuery = activationCountDF.writeStream.outputMode("complete").format("console").start()
+
+activationCountQuery.stop
+
+
+// select the dev ID and account number for actionations of Titanic 1000 models
+val titanic1000DF = activationsDF.where("model = 'Titanic 1000'").select("dev_id","acct_num")
+titanic1000DF.printSchema
+
+// checkpointing must be configured before saving files
+spark.conf.set("spark.sql.streaming.checkpointLocation", "/tmp/streaming-checkpoint")
+
+// save to a set of files.  Only append mode can be used when saving.
+import org.apache.spark.sql.streaming.Trigger.ProcessingTime
+
+val titanic1000Query = titanic1000DF.writeStream.trigger(ProcessingTime("3 seconds")).outputMode("append").format("csv").option("path","/devsh_loudacre/titanic1000/").start()
+titanic1000Query.stop
+

@@ -1,0 +1,37 @@
+# if not uploaded previously: hdfs dfs -put $DEVDATA/accountdevice /devsh_loudacre/
+
+for table in spark.catalog.listTables("devsh"): 
+  print table
+
+for column in spark.catalog.listColumns("accounts","devsh"): 
+   print column
+
+accountsDF = spark.read.table("devsh.accounts")
+accountsDF.printSchema()
+
+firstLastDF = spark.sql("SELECT first_name,last_name FROM devsh.accounts")
+firstLastDF.printSchema()
+firstLastDF.show(5)
+
+firstLastDF2 = accountsDF.select("first_name","last_name")
+firstLastDF2.printSchema()
+firstLastDF2.show(5)
+
+accountDeviceDF = spark.read.option("header","true").option("inferSchema","true").csv("/devsh_loudacre/accountdevice")
+
+accountDeviceDF.createOrReplaceTempView("account_dev")
+
+for table in spark.catalog.listTables("devsh"): print table
+
+spark.sql("SELECT * FROM account_dev LIMIT 5").show()
+
+nameDevDF = spark.sql("SELECT acct_num, first_name, last_name, account_device_id FROM devsh.accounts JOIN account_dev ON acct_num = account_id")
+nameDevDF.show()
+
+nameDevDF.write.option("path","/devsh_loudacre/name_dev").saveAsTable("devsh.name_dev")
+
+for table in spark.catalog.listTables("devsh"): print table
+spark.sql("DESCRIBE devsh.name_dev").show()
+
+# Confirm new table is in Hive
+# $ beeline -u jdbc:hive2://localhost:10000 -e "SHOW TABLES FROM devsh"

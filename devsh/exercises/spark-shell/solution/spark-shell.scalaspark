@@ -1,0 +1,22 @@
+// $ hdfs dfs -put $DEVDATA/devices.json /devsh_loudacre/
+// $ spark-shell
+
+spark
+
+val devDF = spark.read.json("/devsh_loudacre/devices.json")
+
+devDF.printSchema
+
+devDF.show(5)
+
+val rows = devDF.take(5)
+rows.foreach(println)
+
+devDF.count()
+
+val makeModelDF = devDF.select("make","model")
+makeModelDF.printSchema
+
+makeModelDF.show
+
+devDF.select("devnum","make","model").where("make = 'Ronin'").show

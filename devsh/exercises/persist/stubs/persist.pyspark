@@ -1,0 +1,7 @@
+# If not previously uploaded: hdfs dfs -put $DEVDATA/accountdevice /devsh_loudacre/
+
+# stub: query setup
+accountsDF = spark.read.table("devsh.accounts")
+accountDeviceDF = spark.read.option("header","true").option("inferSchema","true").csv("/devsh_loudacre/accountdevice")
+
+accountsDevsDF = accountsDF.join(accountDeviceDF,accountDeviceDF.account_id == accountsDF.acct_num)

@@ -1,0 +1,38 @@
+# Create streaming DataFrame reading from Kafka
+
+# Run with 
+# $ pyspark --master local[2]
+
+# Test with 
+# $ kafka-topics --create --zookeeper localhost:2181 --partitions 2 --replication-factor 1 --topic activations
+# $ $DEVSH/scripts/streamtest-kafka.sh activations localhost:9092 10 $DEVDATA/activations_stream
+
+kafkaDF = spark.readStream.format("kafka").option("kafka.bootstrap.servers", "localhost:9092").option("subscribe", "activations").load()
+kafkaDF.printSchema()
+
+from pyspark.sql.types import *
+
+activationsSchema = StructType([
+  StructField("acct_num", IntegerType()),
+  StructField("dev_id", StringType()),
+  StructField("phone", StringType()),
+  StructField("model", StringType())])
+
+
+stringValueDF = kafkaDF.select(kafkaDF.value.cast("string"))
+
+from pyspark.sql.functions import *
+
+activationsDF = stringValueDF.select(from_json(stringValueDF.value, activationsSchema).alias("activation"))
+activationsDF.printSchema()
+
+activationsQuery = activationsDF.writeStream.outputMode("append").option("truncate","false").format("console").start()
+
+activationsQuery.stop()
+
+# Count activations by model
+countByModelDF = activationsDF.groupBy("activation.model").count()
+# count aggregation only supported with complete output mode
+countByModelQuery = countByModelDF.writeStream.outputMode("complete").format("console").start()
+
+countByModelQuery.stop()

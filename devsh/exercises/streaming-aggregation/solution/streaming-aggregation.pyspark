@@ -1,0 +1,59 @@
+# Create streaming DataFrame reading from Kafka
+
+# Run with 
+# $ spark-shell --master local[2]
+
+# Test with 
+# $ kafka-topics --create --zookeeper localhost:2181 --partitions 2 --replication-factor 1 --topic activations
+# $ $DEVSH/scripts/streamtest-kafka.sh activations localhost:9092 10 $DEVDATA/activations_stream
+
+spark.conf.set("spark.sql.shuffle.partitions","4")
+
+kafkaDF = spark.readStream.format("kafka").option("kafka.bootstrap.servers", "localhost:9092").option("subscribe", "activations").load()
+
+from pyspark.sql.types import *
+
+activationsSchema = StructType([
+  StructField("acct_num", IntegerType()),
+  StructField("dev_id", StringType()),
+  StructField("phone", StringType()),
+  StructField("model", StringType())])
+
+from pyspark.sql.functions import *
+
+
+# full aggregation
+
+activationsDF = kafkaDF.select(from_json(kafkaDF.value.cast("string"), activationsSchema).alias("activation"))
+
+sortedModelCountDF = activationsDF.groupBy(activationsDF.activation.model).count().sort("count",ascending=False)
+
+sortedModelCountQuery = sortedModelCountDF.writeStream.outputMode("complete").format("console").option("truncate","false").trigger(processingTime="5 seconds").start()
+
+sortedModelCountQuery.stop()
+
+
+# window aggregation
+activationsTimeDF = kafkaDF.select("timestamp",from_json(kafkaDF.value.cast("string"), activationsSchema).alias("activation"))
+windowModelCountDF = activationsTimeDF.where(activationsTimeDF.activation.model.startswith("MeeToo 3")).groupBy(window("timestamp", "10 seconds", "5 seconds"), "activation.model").count()
+
+# complete mode
+windowModelCountQuery = windowModelCountDF.writeStream.outputMode("complete").format("console").option("truncate","false").trigger(processingTime="5 seconds").start()
+windowModelCountQuery.stop()
+
+# update mode
+windowModelCountQuery2 = windowModelCountDF.writeStream.outputMode("update").format("console").option("truncate","false").trigger(processingTime="15 seconds").start()
+windowModelCountQuery2.stop()
+
+# Static-Stream join
+accountsStaticDF = spark.read.table("devsh.accounts")
+activeAccountsStaticDF = accountsStaticDF.where(accountsStaticDF.acct_close_dt.isNull())
+
+joinedDF = activeAccountsStaticDF.join(activationsDF, activationsDF.activation.acct_num == accountsStaticDF.acct_num).select("acct_num","first_name","last_name","acct_close_dt","activation.dev_id")
+joinedQuery = joinedDF.writeStream.outputMode("append").format("console").option("truncate","false").trigger(processingTime="1 seconds").start()
+joinedQuery.stop()
+
+
+joinedRightDF = activeAccountsStaticDF.join(activationsDF, activationsDF.activation.acct_num == accountsStaticDF.acct_num,"right_outer").select("acct_num","first_name","last_name","acct_close_dt","activation.dev_id")
+joinedRightQuery = joinedRightDF.writeStream.outputMode("append").format("console").option("truncate","false").trigger(processingTime="1 seconds").start()
+joinedRightQuery.stop()

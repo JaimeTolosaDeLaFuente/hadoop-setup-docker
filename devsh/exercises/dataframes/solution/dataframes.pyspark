@@ -1,0 +1,42 @@
+accountsDF = spark.read.table("devsh.accounts")
+
+accountsDF.printSchema()
+
+accountsDF.where("zipcode = 94913").write.option("header","true").csv("/devsh_loudacre/accounts_zip94913")
+
+test1DF = spark.read.option("header","true").csv("/devsh_loudacre/accounts_zip94913")
+test2DF = spark.read.option("header","true").option("inferSchema","true").csv("/devsh_loudacre/accounts_zip94913")
+
+test1DF.printSchema()
+test2DF.printSchema()
+
+# upload the data file
+# hdfs dfs -put $DEVDATA/devices.json /devsh_loudacre/
+
+# create a DataFrame based on the devices.json file
+devDF = spark.read.json("/devsh_loudacre/devices.json")
+devDF.printSchema()
+
+from pyspark.sql.types import *
+
+devColumns = [
+   StructField("devnum",LongType()),
+   StructField("make",StringType()),
+   StructField("model",StringType()),
+   StructField("release_dt",TimestampType()),
+   StructField("dev_type",StringType())]
+
+
+devSchema = StructType(devColumns)
+
+devDF = spark.read.schema(devSchema).json("/devsh_loudacre/devices.json")
+devDF.printSchema()
+devDF.show()
+
+devDF.write.parquet("/devsh_loudacre/devices_parquet") 
+
+# $ hdfs dfs -get /devsh_loudacre/devices_parquet /tmp/
+# $ parquet-tools schema /tmp/devices_parquet/
+
+spark.read.parquet("/devsh_loudacre/devices_parquet").printSchema()
+ 

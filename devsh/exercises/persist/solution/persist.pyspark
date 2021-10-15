@@ -1,0 +1,20 @@
+# If not previously uploaded: hdfs dfs -put $DEVDATA/accountdevice /devsh_loudacre/
+
+# stub: query setup
+accountsDF = spark.read.table("devsh.accounts")
+accountDeviceDF = spark.read.option("header","true").option("inferSchema","true").csv("/devsh_loudacre/accountdevice")
+accountsDevsDF =  accountsDF.join(accountDeviceDF,accountsDF.acct_num == accountDeviceDF.account_id)
+
+# solution
+accountsDevsDF.select("acct_num","first_name","last_name","device_id").show(5)
+accountsDevsDF.persist()
+accountsDevsDF.select("acct_num","first_name","last_name","device_id").show(5)
+
+# View Storage for persisted queries
+accountsDevsDF.write.mode("overwrite").save("/devsh_loudacre/accounts_devices")
+
+# Change the Storage Level for the Query
+accountsDevsDF.unpersist()
+from pyspark import StorageLevel  
+accountsDevsDF.persist(StorageLevel.DISK_ONLY_2)
+accountsDevsDF.write.mode("overwrite").save("/devsh_loudacre/accounts_devices")

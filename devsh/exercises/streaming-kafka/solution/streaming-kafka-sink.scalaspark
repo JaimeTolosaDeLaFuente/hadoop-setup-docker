@@ -1,0 +1,26 @@
+// Run with 
+// $ spark-shell --master local[2]
+
+// Test with 
+// $ kafka-topics --create --zookeeper localhost:2181 --partitions 2 --replication-factor 1 --topic activations-out
+// $ kafka-console-consumer --bootstrap-server localhost:9092 --topic activations-out
+
+import org.apache.spark.sql.types._
+val activationsSchema = StructType(List(
+  StructField("acct_num", IntegerType),
+  StructField("dev_id", StringType),
+  StructField("phone", StringType),
+  StructField("model", StringType))) 
+
+// simulate stream by reading file set at one file per batch
+val activationsDF = spark.readStream.schema(activationsSchema).option("maxFilesPerTrigger",1).json("file:///home/training/training_materials/devsh/data/activations_stream/")
+
+// Create output DF with empty key, with value = columns concatenated to CSV form
+val activationsValueDF = activationsDF.select(lit("").alias("key"),concat_ws(",",$"acct_num",$"dev_id").alias("value"))
+activationsValueDF.printSchema
+
+// Start the query
+// Note: if you rerun query be sure to clear out checkpoint location directory
+val activationsKafkaQuery = activationsValueDF.writeStream.format("kafka").option("checkpointLocation","/tmp/kafka-checkpoint").option("topic","activations-out").option("kafka.bootstrap.servers","localhost:9092").start()
+activationsKafkaQuery.stop
+
