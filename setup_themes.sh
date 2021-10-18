@@ -8,7 +8,7 @@ then
     echo "Cargando datos del tema 1"
     hadoop fs -put /home/devsh/data/activations /devsh_loudacre/
     hadoop fs -put /home/devsh/data/kb /devsh_loudacre/
-elif [ $1 -le 2]
+elif [ $1 -le 2 ]
 then
     echo "Cargando datos del tema 2"
     hadoop fs -put /home/devsh/data/devices.json /devsh_loudacre/
