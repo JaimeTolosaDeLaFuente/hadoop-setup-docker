@@ -111,8 +111,11 @@ RUN service ssh start \
 
 #mr job
 RUN apt-get install -y python-pip \
-    && pip install mrjob
+    && pip install mrjob \ 
+    && pip install findspark
 
+RUN pip install --upgrade pip
+ 
 # spark
 RUN curl -s https://archive.apache.org/dist/spark/spark-2.4.3/spark-2.4.3-bin-without-hadoop-scala-2.12.tgz | tar -xz -C /usr/local
 ENV SPARK_HOME /usr/local/spark-2.4.3-bin-without-hadoop-scala-2.12/
@@ -121,6 +124,7 @@ ENV PATH $PATH:$SPARK_HOME/bin
 ADD spark-env.sh $SPARK_HOME/conf/spark-env.sh
 RUN echo  "export PYSPARK_PYTHON=python3" >> /usr/local/spark/conf/spark-env.sh
 
+
 ADD devsh /home/devsh
 ADD setup_themes.sh /home/devsh/setup_themes.sh
 
@@ -128,8 +132,11 @@ ADD bootstrap.sh /etc/bootstrap.sh
 RUN chown root:root /etc/bootstrap.sh
 RUN chmod 700 /etc/bootstrap.sh
 
+RUN apt-get install nano
+RUN pip install jupyter
+
 ENV BOOTSTRAP /etc/bootstrap.sh
 
 ENTRYPOINT ["/etc/bootstrap.sh", "-d"]
 
-EXPOSE 8031 8030 8032 8088 8033 40661 8040 13562 8042 50070 9000 50010 50075 50020 50090 8080 8081
+EXPOSE 8031 8030 8032 8088 8033 40661 8040 13562 8042 50070 9000 50010 50075 50020 50090 8080 8081 7077 9090

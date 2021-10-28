@@ -21,7 +21,7 @@ docker pull suhothayan/hadoop-spark-pig-hive:2.9.2
 In order to use the Docker image you have just build or pulled use:
 
 ```
-docker run -it -p 50070:50070 -p 8088:8088 -p 8080:8080 suhothayan/hadoop-spark-pig-hive:2.9.2 bash
+docker run -it -p 50070:50070 -p 8088:8088 -p 8080:8080 -p 7077:7077 -p 8090:8090 hadoop:2.9.8 bash
 ```
 
 ## Testing
