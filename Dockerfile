@@ -110,11 +110,12 @@ RUN service ssh start \
     nohup $HADOOP_PREFIX/sbin/stop-yarn.sh &>/dev/null &
 
 #mr job
-RUN apt-get install -y python-pip \
-    && pip install mrjob \ 
-    && pip install findspark
+RUN apt-get update
+RUN apt-get install -y build-essential python3.6 python3-pip python3-dev
+RUN pip3 install --upgrade pip
+RUN pip3 install mrjob \ 
+    && pip3 install findspark
 
-RUN pip install --upgrade pip
  
 # spark
 RUN curl -s https://archive.apache.org/dist/spark/spark-2.4.3/spark-2.4.3-bin-without-hadoop-scala-2.12.tgz | tar -xz -C /usr/local
@@ -133,7 +134,7 @@ RUN chown root:root /etc/bootstrap.sh
 RUN chmod 700 /etc/bootstrap.sh
 
 RUN apt-get install nano
-RUN pip install jupyter
+RUN pip3 install jupyter
 
 ENV BOOTSTRAP /etc/bootstrap.sh
 

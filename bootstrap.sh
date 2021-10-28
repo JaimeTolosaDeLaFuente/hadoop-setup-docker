@@ -27,7 +27,8 @@ while ! nc -z localhost 9000; do
   sleep 1 # wait for 1 second before check again
 done
 
-jupyter notebook --allow-root --no-browser --ip=0.0.0.0 --port=9090 --NotebookApp.token='' --NotebookApp.password='' &
+nohup jupyter notebook --allow-root --no-browser --ip=0.0.0.0 --port=9090 --NotebookApp.token='' --NotebookApp.password='' &
+
 
 hdfs dfsadmin -safemode wait
 #
